@@ -15,7 +15,7 @@ from tqdm import tqdm
 import pickle
 from collections import defaultdict
 from random import shuffle
-
+from csv import reader
 
 def evaluate(model, features, labels, mask):
     model.eval()
@@ -47,21 +47,22 @@ def createTraining(labels, valid_mask = None, train_ratio=0.8):
     return train_mask, test_mask
 
 def read_struct_net(file_path):
-    #g = DGLGraph()
     g = nx.Graph()
-    
-    #g.add_nodes(1000)
-    with open(file_path) as IN:
-        for line in IN:
-            tmp = line.strip().split()
-            # print(tmp[0], tmp[1])
-            g.add_edge(int(tmp[0]), int(tmp[1]))
+
+    with open(file_path, 'r') as read_csv:
+        csv_reader = reader(read_csv)
+        header = next(csv_reader)
+        # Check file as empty
+        if header != None:
+            for row in csv_reader:
+                g.add_edge(int(row[1]), int(row[2]))
+
+    print('num of nodes : ', g.number_of_nodes())
+    print('num of edges : ', g.number_of_edges())
+
     return g
-    #g.add_nodes(len(graph_a.id2idx) + len(graph_b.id2idx))
     
-    #g.add_edges(graph_a.edge_src, graph_a.edge_dst)
-    #g.add_edges(graph_a.edge_dst, graph_a.edge_src)
-    
+
 def constructDGL(graph):
     node_mapping = defaultdict(int)
 
@@ -89,22 +90,23 @@ def output_adj(graph):
 def compute_term(l, r):
     n = l.shape[0]
 
-    # 왜 Eigenvalues 를 이용하는지 다시 확인해보기
     eval_ = eigh((l-r).T @ (l-r), eigvals_only=True)
     return np.sqrt(max(eval_))
     
 def main(args):
     def constructSubG(file_path):
+        ## node, edge update using networkX library
         g = read_struct_net(file_path)
         
-        # if True ?
+        ## remove selfloop edges
         g.remove_edges_from(nx.selfloop_edges(g))
-
+        print('removed selfloop edges (count) :', g.number_of_edges())
+        print('----------------------')
+        
         g = constructDGL(g)
-        print('g :', g)
+        print('dgl graph :', g)
         print('----------------------')
         g.readonly()
-        # n_edges = g.number_of_edges()
 
         node_sampler = dgl.contrib.sampling.NeighborSampler(g, 1, 10,  # 0,
                                                                 neighbor_type='in', num_workers=1,
@@ -158,7 +160,6 @@ def main(args):
                 A[idx_coding[left_id], idx_coding[right_id]] = 1
     
         # lower part is the out-degree direction
-        # A = np.tril(A, -1)
         if neighbor_type=='in':
             # upper     
             A = A.T
@@ -183,44 +184,17 @@ def main(args):
         # reassign the calculated Laplacian
         A[np.ix_(selector, selector)] = normailized_L
 
-
-        """
-        ex)
-        nL = normailized_L 이라 할 때
-            [[0. nL 0. ... nL 0. 0.]
-            [0. 0. nL ... 0. 0. 0.]
-            [nL 0. 0. ... 0. 0. nL]
-            ...
-            [nL 0. 0. ... 0. 0. 0.]
-            [0. 0. nL ... 0. 0. nL]
-            [0. 0. 0. ... nL 0. 0.]]
-
-        위와 같은 방식으로 Adjacency matrix 가 형성됨
-        """
-
-        # print(np.diag(D))
-
         if np.isnan(A.sum()):
             embed()
 
         return A
-
-    # def degPermute(ego_g, hop_dic):
-    #     perm_hop_dic = hop_dic
-    #     for layer_id in range(1, n_layers+2)[::-1]:
-    #         s, arg_degree_sort = torch.sort(-ego_g.layer_in_degree(layer_id))
-    #         print(arg_degree_sort)
-    #         perm_hop_dic[layer_id] = torch.tensor(hop_dic[layer_id])[arg_degree_sort].tolist()
-    #     return perm_hop_dic
 
     def degPermute(ego_g, hop_dic, layer_id):
         if layer_id == 0:
             return hop_dic[layer_id]
         else:
             s, arg_degree_sort = torch.sort(-ego_g.layer_in_degree(layer_id))
-            # print(s)
-            # print(len(-ego_g.layer_in_degree(layer_id)))
-            # print(len(hop_dic[layer_id]))
+
             return torch.tensor(hop_dic[layer_id])[arg_degree_sort].tolist()
 
     def pad_nbhd(lg, rg, lego_g, rego_g, perm_type='shuffle', neighbor_type='out'):
@@ -284,11 +258,11 @@ def main(args):
 
         return lL, rL
 
+    print('\n start!!!')
     print(args.file_path, args.label_path)
 
-    print('TODO : dgl.neighborSampler 뜯어보기')
     print('---------------------')
-    print(dgl.__version__)
+    print('dgl version : ', dgl.__version__)
     print('---------------------')
 
     Lg, Lego_list = constructSubG(args.file_path)
@@ -310,35 +284,33 @@ def main(args):
     cntr = 0
     for lego_g in tqdm(Lego_list):
 
-        print('\n ----------------------')
-        print('lego_g.num_blocks :', lego_g.num_blocks)
+        # print('\n ----------------------')
+        # print('lego_g.num_blocks :', lego_g.num_blocks)
         
-        print('----------------------')
-        print('lego_g.block_parent_eid(0) :', lego_g.block_parent_eid(0))
+        # print('----------------------')
+        # print('lego_g.block_parent_eid(0) :', lego_g.block_parent_eid(0))
 
-        print('----------------------')
-        print('g.find_edges(lego_g.block_parent_eid(0)) :', Lg.find_edges(lego_g.block_parent_eid(0)))
+        # print('----------------------')
+        # print('g.find_edges(lego_g.block_parent_eid(0)) :', Lg.find_edges(lego_g.block_parent_eid(0)))
 
-        u,v = Lg.find_edges(lego_g.block_parent_eid(0))
+        # u,v = Lg.find_edges(lego_g.block_parent_eid(0))
 
-        print('u', u)
-        print('v', v)
+        # print('u', u)
+        # print('v', v)
 
-        A=np.zeros([100,100])
-        A[2,1]=1
-        print('A', A)
-        print('A.T', A.T)
-
+        # A=np.zeros([100,100])
+        # A[2,1]=1
+        # print('A', A)
+        # print('A.T', A.T)
 
         # tmp
-        print('break')
-        break
+        # print('break')
+        # breaktj
 
         cntl += 1
         cntr = 0
         for rego_g in Rego_list:
             cntr += 1
-            # print(cntr)
             lL, rL = pad_nbhd(Lg, Rg, lego_g, rego_g,
                                 perm_type='shuffle',
                                 neighbor_type='in')           
@@ -394,6 +366,6 @@ if __name__ == '__main__':
 
     parser.set_defaults(self_loop=False)
     args = parser.parse_args()
-    # print(args)
+    
     
     main(args)

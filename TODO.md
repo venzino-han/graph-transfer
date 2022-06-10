@@ -4,3 +4,5 @@
 2. using new dataset (smaller size)
     - music
     - video
+
+3. change function, object name

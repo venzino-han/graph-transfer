@@ -1,4 +1,5 @@
 import argparse, time
+import pandas as pd
 import numpy as np
 import networkx as nx
 import torch
@@ -16,6 +17,7 @@ import pickle
 from collections import defaultdict
 from random import shuffle
 from csv import reader
+
 
 def evaluate(model, features, labels, mask):
     model.eval()
@@ -49,13 +51,25 @@ def createTraining(labels, valid_mask = None, train_ratio=0.8):
 def read_struct_net(file_path):
     g = nx.Graph()
 
-    with open(file_path, 'r') as read_csv:
-        csv_reader = reader(read_csv)
-        header = next(csv_reader)
-        # Check file as empty
-        if header != None:
-            for row in csv_reader:
-                g.add_edge(int(row[1]), int(row[2]))
+    # with open(file_path, 'r') as read_csv:
+    #     csv_reader = reader(read_csv)
+    #     header = next(csv_reader)
+    #     # Check file as empty
+    #     if header != None:
+    #         cnt = 0
+    #         for row in csv_reader:
+    #             g.add_edge(int(row[1]), int(row[2]))
+    #             cnt += 1
+
+    #             # if cnt ==10:
+    #             #     break
+
+    df = pd.read_csv(file_path, index_col=0).iloc[:, :2]
+    df = df.drop_duplicates()
+    df['item_id'] += max(df['user_id']) + 1
+
+    for user_id, item_id in zip(df['user_id'], df['item_id']):
+        g.add_edge(int(user_id), int(item_id))
 
     print('num of nodes : ', g.number_of_nodes())
     print('num of edges : ', g.number_of_edges())
@@ -111,7 +125,10 @@ def main(args):
         node_sampler = dgl.contrib.sampling.NeighborSampler(g, 1, 10,  # 0,
                                                                 neighbor_type='in', num_workers=1,
                                                                 add_self_loop=False,
-                                                                num_hops=args.n_layers + 1, shuffle=True)
+                                                                # seed_nodes=1,
+                                                                num_hops=args.n_layers + 1,
+                                                                # shuffle=True
+                                                                )
         return g, node_sampler
 
 
@@ -284,19 +301,20 @@ def main(args):
     cntr = 0
     for lego_g in tqdm(Lego_list):
 
-        # print('\n ----------------------')
-        # print('lego_g.num_blocks :', lego_g.num_blocks)
+        print('\n ----------------------')
+        print('lego_g.num_blocks :', lego_g.num_blocks)
         
-        # print('----------------------')
-        # print('lego_g.block_parent_eid(0) :', lego_g.block_parent_eid(0))
+        print('----------------------')
+        lego_block_pa_1 = lego_g.block_parent_eid(1)
+        print('lego_g.block_parent_eid(1) :', lego_block_pa_1)
 
-        # print('----------------------')
-        # print('g.find_edges(lego_g.block_parent_eid(0)) :', Lg.find_edges(lego_g.block_parent_eid(0)))
+        print('----------------------')
+        print('g.find_edges(lego_g.block_parent_eid(1)) :', Lg.find_edges(lego_block_pa_1))
 
-        # u,v = Lg.find_edges(lego_g.block_parent_eid(0))
+        u,v = Lg.find_edges(lego_g.block_parent_eid(1))
 
-        # print('u', u)
-        # print('v', v)
+        print('u', u)
+        print('v', v)
 
         # A=np.zeros([100,100])
         # A[2,1]=1
@@ -305,7 +323,7 @@ def main(args):
 
         # tmp
         # print('break')
-        # breaktj
+        # break
 
         cntl += 1
         cntr = 0

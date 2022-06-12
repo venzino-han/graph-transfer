@@ -40,7 +40,3 @@ python run_airport.py --file-path=data/usa-airports.edgelist --label-path=data/l
 ```
 python new_compute_EGI_Gap.py --data-path-1=data/music_sub_train.csv --data-path-2=data/video_game_sub_train.csv --result-path ./result.txt
 ```
-### from pickle file for synthetic experiment
-```
-python compute_bound_pickle.py --args.file-path=data/barabasi_small_graphs_full.pkl --args.label-path=data/forest_fire_graphs_full.pkl
-```

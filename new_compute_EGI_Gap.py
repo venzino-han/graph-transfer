@@ -276,14 +276,14 @@ def main(args):
         return lL, rL
 
     print('\n start!!!')
-    print(args.file_path, args.label_path)
+    print(args.data_path_1, args.data_path_2)
 
     print('---------------------')
     print('dgl version : ', dgl.__version__)
     print('---------------------')
 
-    Lg, Lego_list = constructSubG(args.file_path)
-    Rg, Rego_list = constructSubG(args.label_path)
+    Lg, Lego_list = constructSubG(args.data_path_1)
+    Rg, Rego_list = constructSubG(args.data_path_2)
 
 
     print('Lg')
@@ -335,8 +335,11 @@ def main(args):
 
             bound += compute_term(lL, rL)
 
+    result = bound / (cntl * cntr) 
+    print(result)
 
-    print(bound / (cntl * cntr))
+    with open(f"{args.result_path}", "w") as file:
+        file.write(f"result : {result}")
 
 
 
@@ -375,10 +378,12 @@ if __name__ == '__main__':
                     help="[usa, europe, brazil]")
     parser.add_argument("--data-src", type=str, default='',
                     help="[usa, europe, brazil]")
-    parser.add_argument("--file-path", type=str,
-                        help="graph path")
-    parser.add_argument("--label-path", type=str,
-                        help="label path")
+    parser.add_argument("--data-path-1", type=str,
+                        help="graph_1 path")
+    parser.add_argument("--data-path-2", type=str,
+                        help="graph_2 path")
+    parser.add_argument("--result-path", type=str,
+                        help="graph_2 path")                        
     parser.add_argument("--model-id", type=int, default=0,
                     help="[0, 1, 2, 3]")
 

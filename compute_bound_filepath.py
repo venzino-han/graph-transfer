@@ -245,7 +245,11 @@ def main(args):
                                 neighbor_type='in')
             bound += compute_term(lL, rL)
             
-    print(bound / (cntl * cntr))
+    result = bound / (cntl * cntr)
+    print(result)
+
+    with open(f"{args.result_path}", "w") as file:
+        file.write(f"result : {result}")
 
 
 if __name__ == '__main__':
@@ -289,6 +293,8 @@ if __name__ == '__main__':
                         help="label path")
     parser.add_argument("--model-id", type=int, default=0,
                     help="[0, 1, 2, 3]")
+    parser.add_argument("--result-path", type=str,
+                    help="result path")      
 
     parser.set_defaults(self_loop=False)
     args = parser.parse_args()

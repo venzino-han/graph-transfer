@@ -3,3 +3,4 @@ torch
 networkx
 scipy
 easydict
+sklearn

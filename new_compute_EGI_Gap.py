@@ -301,20 +301,20 @@ def main(args):
     cntr = 0
     for lego_g in tqdm(Lego_list):
 
-        print('\n ----------------------')
-        print('lego_g.num_blocks :', lego_g.num_blocks)
+        # print('\n ----------------------')
+        # print('lego_g.num_blocks :', lego_g.num_blocks)
         
-        print('----------------------')
-        lego_block_pa_1 = lego_g.block_parent_eid(1)
-        print('lego_g.block_parent_eid(1) :', lego_block_pa_1)
+        # print('----------------------')
+        # lego_block_pa_1 = lego_g.block_parent_eid(1)
+        # print('lego_g.block_parent_eid(1) :', lego_block_pa_1)
 
-        print('----------------------')
-        print('g.find_edges(lego_g.block_parent_eid(1)) :', Lg.find_edges(lego_block_pa_1))
+        # print('----------------------')
+        # print('g.find_edges(lego_g.block_parent_eid(1)) :', Lg.find_edges(lego_block_pa_1))
 
-        u,v = Lg.find_edges(lego_g.block_parent_eid(1))
+        # u,v = Lg.find_edges(lego_g.block_parent_eid(1))
 
-        print('u', u)
-        print('v', v)
+        # print('u', u)
+        # print('v', v)
 
         # A=np.zeros([100,100])
         # A[2,1]=1
@@ -383,7 +383,7 @@ if __name__ == '__main__':
     parser.add_argument("--data-path-2", type=str,
                         help="graph_2 path")
     parser.add_argument("--result-path", type=str,
-                        help="graph_2 path")                        
+                        help="result path")                        
     parser.add_argument("--model-id", type=int, default=0,
                     help="[0, 1, 2, 3]")
 

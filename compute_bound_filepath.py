@@ -247,6 +247,9 @@ def main(args):
             
     print(bound / (cntl * cntr))
 
+    with open(f"{args.result_path}", "w") as file:
+        file.write(f"result : {result}")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='DGI')
@@ -289,6 +292,8 @@ if __name__ == '__main__':
                         help="label path")
     parser.add_argument("--model-id", type=int, default=0,
                     help="[0, 1, 2, 3]")
+    parser.add_argument("--result-path", type=str,
+                    help="result path")      
 
     parser.set_defaults(self_loop=False)
     args = parser.parse_args()

@@ -19,55 +19,18 @@ from random import shuffle
 from csv import reader
 
 
-def evaluate(model, features, labels, mask):
-    model.eval()
-    with torch.no_grad():
-        logits = model(features)
-        logits = logits[mask]
-        labels = labels[mask]
-        _, indices = torch.max(logits, dim=1)
-        correct = torch.sum(indices == labels)
-        return correct.item() * 1.0 / len(labels)
-
-def degree_bucketing(graph, args, degree_emb=None, max_degree = 10):
-    max_degree = args.n_hidden
-    features = torch.ones([graph.number_of_nodes(), max_degree])
-    return features
-
-def createTraining(labels, valid_mask = None, train_ratio=0.8):
-    train_mask = torch.zeros(labels.shape, dtype=torch.bool)
-    test_mask = torch.ones(labels.shape, dtype=torch.bool)
-    
-    num_train = int(labels.shape[0] * train_ratio)
-    all_node_index = list(range(labels.shape[0]))
-    np.random.shuffle(all_node_index)
-    train_mask[all_node_index[:num_train]] = 1
-    test_mask[all_node_index[:num_train]] = 0
-    if valid_mask is not None:
-        train_mask *= valid_mask
-        test_mask *= valid_mask
-    return train_mask, test_mask
-
-def read_struct_net(file_path):
+# def read_struct_net(file_path):
+def get_nx_graph(file_path):
+    # get empty nx graph
     g = nx.Graph()
 
-    # with open(file_path, 'r') as read_csv:
-    #     csv_reader = reader(read_csv)
-    #     header = next(csv_reader)
-    #     # Check file as empty
-    #     if header != None:
-    #         cnt = 0
-    #         for row in csv_reader:
-    #             g.add_edge(int(row[1]), int(row[2]))
-    #             cnt += 1
-
-    #             # if cnt ==10:
-    #             #     break
-
+    # read data from csv
     df = pd.read_csv(file_path, index_col=0).iloc[:, :2]
+    # remove duplicate and reset the item_id
     df = df.drop_duplicates()
     df['item_id'] += max(df['user_id']) + 1
 
+    # add edge to nx graph
     for user_id, item_id in zip(df['user_id'], df['item_id']):
         g.add_edge(int(user_id), int(item_id))
 
@@ -77,29 +40,42 @@ def read_struct_net(file_path):
     return g
     
 
-def constructDGL(graph):
-    node_mapping = defaultdict(int)
+# def constructDGL(graph):
+def get_DGL(graph):
 
+    # get node_dictionary if there pass the num
+    """
+    ex) there are passed number 4, 5, 7
+    0, 1, 2, 3, 6, 8, 9
+    -> 
+    0:0, 1:1, 2:2, 3:3, 6:4, 8:5, 9:6
+    """
+    node_mapping = defaultdict(int)
     for node in sorted(list(graph.nodes())):
         node_mapping[node] = len(node_mapping)
+    """
+    node_mapping = defaultdict(int,
+                    {0: 0,
+                    1: 1,
+                    2: 2,
+                    3: 3,
+                    4: 4,
+                    ...
+    """
+
+    # create Graph using DGL Library
     new_g = DGLGraph()
     new_g.add_nodes(len(node_mapping))
 
+    # add edge to DGL graph
     for edge in graph.edges():
         if not new_g.has_edge_between(node_mapping[edge[0]], node_mapping[edge[1]]):
             new_g.add_edge(node_mapping[edge[0]], node_mapping[edge[1]])
         if not new_g.has_edge_between(node_mapping[edge[1]], node_mapping[edge[0]]):
             new_g.add_edge(node_mapping[edge[1]], node_mapping[edge[0]])
     
-    # embed()
     return new_g 
 
-def output_adj(graph):
-    A = np.zeros([graph.number_of_nodes(), graph.number_of_nodes()])
-    a,b = graph.all_edges()
-    for id_a, id_b in zip(a.numpy().tolist(), b.numpy().tolist()):
-        A[id_a, id_b] = 1
-    return A
 
 def compute_term(l, r):
     n = l.shape[0]
@@ -110,14 +86,16 @@ def compute_term(l, r):
 def main(args):
     def constructSubG(file_path):
         ## node, edge update using networkX library
-        g = read_struct_net(file_path)
+        # g = read_struct_net(file_path)
+        g = get_nx_graph(file_path)
         
         ## remove selfloop edges
         g.remove_edges_from(nx.selfloop_edges(g))
         print('removed selfloop edges (count) :', g.number_of_edges())
         print('----------------------')
         
-        g = constructDGL(g)
+        # g = constructDGL(g)
+        g = get_DGL(g)
         print('dgl graph :', g)
         print('----------------------')
         g.readonly()
@@ -125,7 +103,6 @@ def main(args):
         node_sampler = dgl.contrib.sampling.NeighborSampler(g, 1, 10,  # 0,
                                                                 neighbor_type='in', num_workers=1,
                                                                 add_self_loop=False,
-                                                                # seed_nodes=1,
                                                                 num_hops=args.n_layers + 1,
                                                                 # shuffle=True
                                                                 )
@@ -275,8 +252,12 @@ def main(args):
 
         return lL, rL
 
+
     print('\n start!!!')
+    print('---------------------')
+    print('dataset path_1, dataset path_2')
     print(args.data_path_1, args.data_path_2)
+
 
     print('---------------------')
     print('dgl version : ', dgl.__version__)

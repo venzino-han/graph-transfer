@@ -245,7 +245,8 @@ def main(args):
                                 neighbor_type='in')
             bound += compute_term(lL, rL)
             
-    print(bound / (cntl * cntr))
+    result = bound / (cntl * cntr)
+    print(result)
 
     with open(f"{args.result_path}", "w") as file:
         file.write(f"result : {result}")

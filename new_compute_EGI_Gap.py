@@ -304,18 +304,32 @@ def main(args):
         # print('\n ----------------------')
         # print('lego_g.num_blocks :', lego_g.num_blocks)
         
+<<<<<<< HEAD:new_compute_EGI_Gap.py
         # print('----------------------')
         # lego_block_pa_1 = lego_g.block_parent_eid(1)
         # print('lego_g.block_parent_eid(1) :', lego_block_pa_1)
 
         # print('----------------------')
         # print('g.find_edges(lego_g.block_parent_eid(1)) :', Lg.find_edges(lego_block_pa_1))
+=======
+        print('----------------------')
+        lego_block_pa_1 = lego_g.block_parent_eid(1)
+        print('lego_g.block_parent_eid(1) :', lego_block_pa_1)
+
+        print('----------------------')
+        print('g.find_edges(lego_g.block_parent_eid(1)) :', Lg.find_edges(lego_block_pa_1))
+
+        u,v = Lg.find_edges(lego_g.block_parent_eid(1))
+>>>>>>> upstream/EGI_Gap_Renewal:220610_new_compute_EGI_Gap.py
 
         # u,v = Lg.find_edges(lego_g.block_parent_eid(1))
 
+<<<<<<< HEAD:new_compute_EGI_Gap.py
         # print('u', u)
         # print('v', v)
 
+=======
+>>>>>>> upstream/EGI_Gap_Renewal:220610_new_compute_EGI_Gap.py
         # A=np.zeros([100,100])
         # A[2,1]=1
         # print('A', A)
@@ -383,7 +397,11 @@ if __name__ == '__main__':
     parser.add_argument("--data-path-2", type=str,
                         help="graph_2 path")
     parser.add_argument("--result-path", type=str,
+<<<<<<< HEAD:new_compute_EGI_Gap.py
                         help="result path")                        
+=======
+                        help="graph_2 path")                        
+>>>>>>> upstream/EGI_Gap_Renewal:220610_new_compute_EGI_Gap.py
     parser.add_argument("--model-id", type=int, default=0,
                     help="[0, 1, 2, 3]")
 

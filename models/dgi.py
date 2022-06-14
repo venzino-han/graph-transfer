@@ -497,8 +497,6 @@ class Classifier(nn.Module):
     def forward(self, features):
         features = self.fc(features)
         return features
-        #return features.squeeze()
-        #return torch.log_softmax(features, dim=-1)
 
 class MultiClassifier(nn.Module):
     def __init__(self, n_hidden, n_classes):

@@ -1,0 +1,4 @@
+files:
+  # - ./igmc/train_configs/baseline_igmc_book.yaml
+  - ./igmc/train_configs/baseline_igmc_music.yaml
+  - ./igmc/train_configs/baseline_igmc_video_game.yaml

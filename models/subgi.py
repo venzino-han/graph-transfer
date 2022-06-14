@@ -288,7 +288,7 @@ class GNNDiscLayer(nn.Module):
 
 class SubGDiscriminator(nn.Module):
     # discriminator for mutual information maximization
-    def __init__(self, g, in_feats, n_hidden, model_id, n_layers = 2):
+    def __init__(self, g, in_feats, n_hidden, model_id=2, n_layers = 2):
         super(SubGDiscriminator, self).__init__()
         self.g = g
 

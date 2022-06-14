@@ -1,0 +1,12 @@
+.editorconfig
+# *.json
+# *.csv
+# *.bin
+# *.gz
+# *.log
+# *.npy
+# *.pt
+*.ipynb
+__pycache__
+
+cuda_test.py

@@ -12,18 +12,15 @@ from dgl import DGLGraph
 from dgl.data import register_data_args, load_data
 from models.dgi import DGI, MultiClassifier
 from models.subgi import SubGI
-from IPython import embed
 import scipy.sparse as sp
 from collections import defaultdict
 from torch.autograd import Variable
 from tqdm import tqdm
 import pickle
 from collections import defaultdict
-from sklearn.manifold import SpectralEmbedding
 
 import pandas as pd
-from dataset import egograph_extraction
-
+from dgl.sampling import sample_neighbors
 
 def evaluate(model, features, labels, mask):
     model.eval()
@@ -35,19 +32,7 @@ def evaluate(model, features, labels, mask):
         correct = torch.sum(indices == labels)
         return correct.item() * 1.0 / len(labels)
 
-def spectral_feature(graph, args):
-    #create adj matrix --> sepctral embedding (n_hidden)
-    A = np.zeros([graph.number_of_nodes(), graph.number_of_nodes()])
-    a,b = graph.all_edges()
-    
-    for id_a, id_b in zip(a.numpy().tolist(), b.numpy().tolist()):
-        #OUT.write('0 {} {} 1\n'.format(id_a, id_b))
-        A[id_a, id_b] = 1
-    embedding = SpectralEmbedding(n_components=args.n_hidden)
-    features = torch.FloatTensor(embedding.fit_transform(A))
-    return features
-
-def degree_bucketing(graph, args, degree_emb=None, max_degree = 10):
+def get_node_degree(graph, args, degree_emb=None, max_degree = 10):
     # node degree --> one-hot feature
     max_degree = args.n_hidden
     features = torch.zeros([graph.number_of_nodes(), max_degree])
@@ -66,14 +51,54 @@ def createTraining(labels, valid_mask = None, train_ratio=0.8):
     num_train = int(labels.shape[0] * train_ratio)
     all_node_index = list(range(labels.shape[0]))
     np.random.shuffle(all_node_index)
-    #for i in range(len(idx) * train_ratio):
-    # embed()
+
     train_mask[all_node_index[:num_train]] = 1
     test_mask[all_node_index[:num_train]] = 0
     if valid_mask is not None:
         train_mask *= valid_mask
         test_mask *= valid_mask
     return train_mask, test_mask
+
+# TODO
+def read_struct_net(df:pd.DataFrame):
+    g = nx.Graph()
+
+    user_ids = df['user_id']
+    item_ids = df['item_id']
+    ratings = df['rating']
+
+    for u, i in 
+
+    with open(args.file_path) as IN:
+        for line in IN:
+            tmp = line.strip().split()
+            g.add_edge(int(tmp[0]), int(tmp[1]))
+    labels = dict()
+    with open(args.label_path) as IN:
+        IN.readline()
+        for line in IN:
+            tmp = line.strip().split(' ')
+            labels[int(tmp[0])] = int(tmp[1])
+    return g, ratings
+    
+def constructDGL(graph, labels):
+    node_mapping = defaultdict(int)
+    relabels = []
+    for node in sorted(list(graph.nodes())):
+        node_mapping[node] = len(node_mapping)
+        relabels.append(labels[node])
+    # embed()
+    assert len(node_mapping) == len(labels)
+    new_g = DGLGraph()
+    new_g.add_nodes(len(node_mapping))
+    for i in range(len(node_mapping)):
+        new_g.add_edge(i, i)
+    for edge in graph.edges():
+        new_g.add_edge(node_mapping[edge[0]], node_mapping[edge[1]])
+        new_g.add_edge(node_mapping[edge[1]], node_mapping[edge[0]])
+    
+    # embed()
+    return new_g, relabels
 
 def output_adj(graph):
     A = np.zeros([graph.number_of_nodes(), graph.number_of_nodes()])
@@ -82,66 +107,44 @@ def output_adj(graph):
         A[id_a, id_b] = 1
     return A
 
-def build_graph(df:pd.DataFrame):
-    g = DGLGraph()
-
-    user_ids = df['user_id']
-    item_ids = df['item_id']
-    ratings = df['rating']
-
-    for u, i in zip(user_ids, item_ids):
-        g.add_edges(u, i,)
-        g.add_edges(i, u)
-
-    # dgl.add_self_loop(g)
-
-    node_degree = g.in_degrees()
-    g.ndata['node_degree'] = node_degree
-    
-    return g, ratings, user_ids, item_ids
-
-hop=2
-
 # dump the best run
 def main(args):
+    # load and preprocess dataset
+    #data = load_data(args)
     torch.manual_seed(2)
+
     test_acc = []
-
-    #read data
-    df = pd.read_csv('data/music_sub_train.csv', index_col=0)
-    df = df.drop_duplicates()
-    df['item_id'] += max(df['user_id'])
-    
-    valid_df = pd.read_csv('data/music_sub_valid.csv', index_col=0)
-    valid_df = valid_df.drop_duplicates()
-    valid_df['item_id'] += max(df['user_id'])
-
-    train_g, train_rating, train_user_ids, train_item_ids = build_graph(df)
-    
-    _, valid_rating, valid_user_ids, valid_item_ids = build_graph(valid_df)
-    valid_g, _, _, _ = build_graph(pd.concat([df,valid_df]))
-
     for runs in tqdm(range(10)):
-        labels = torch.LongTensor(train_rating)
+
+        #build graph 
+        g,labels = read_struct_net(args)
+        valid_mask = None
+        if True:
+            g.remove_edges_from(nx.selfloop_edges(g))
+
+        g, labels = constructDGL(g, labels)
+
+        labels = torch.LongTensor(labels)
         
-        # degree_emb = nn.Parameter(torch.FloatTensor(np.random.normal(0, 1, [100, args.n_hidden])), requires_grad=False)
-        # features = degree_bucketing(g, args, degree_emb)
 
-        # train_mask, test_mask = createTraining(labels, valid_mask)
-        # # labels = torch.LongTensor(labels)
-        # if hasattr(torch, 'BoolTensor'):
-        #     train_mask = torch.BoolTensor(train_mask)
-        #     #val_mask = torch.BoolTensor(val_mask)
-        #     test_mask = torch.BoolTensor(test_mask)
-        # else:
-        #     train_mask = torch.ByteTensor(train_mask)
-        #     #val_mask = torch.ByteTensor(val_mask)
-        #     test_mask = torch.ByteTensor(test_mask)
 
-        # in_feats = features.shape[1]
-        features = train_g.ndata['node_degree']
+        degree_emb = nn.Parameter(torch.FloatTensor(np.random.normal(0, 1, [100, args.n_hidden])), requires_grad=False)
+
+        features = get_node_degree(g, args, degree_emb)
+        train_mask, test_mask = createTraining(labels, valid_mask)
+
+        if hasattr(torch, 'BoolTensor'):
+            train_mask = torch.BoolTensor(train_mask)
+            #val_mask = torch.BoolTensor(val_mask)
+            test_mask = torch.BoolTensor(test_mask)
+        else:
+            train_mask = torch.ByteTensor(train_mask)
+            #val_mask = torch.ByteTensor(val_mask)
+            test_mask = torch.ByteTensor(test_mask)
+        
+        in_feats = features.shape[1]
         n_classes = labels.max().item() + 1
-        n_edges = train_g.number_of_edges()
+        n_edges = g.number_of_edges()
 
         if args.gpu < 0:
             cuda = False
@@ -151,50 +154,57 @@ def main(args):
             features = features.cuda()
             labels = labels.cuda()
 
-        # g.readonly()
-        dgi = SubGI(train_g,
-                    in_feats=hop+1,
-                    n_hidden=args.n_hidden,
-                    n_layers=args.n_layers,
-                    activation=nn.PReLU(args.n_hidden),
-                    dropout=args.dropout,
-                    modle_id=args.model_id)
-        # print(dgi)
+        
+
+        g.readonly()
+        n_edges = g.number_of_edges()
+        
+        dgi = SubGI(g,
+                in_feats,
+                args.n_hidden,
+                args.n_layers,
+                nn.PReLU(args.n_hidden),
+                args.dropout)
+        
         if cuda:
             dgi.cuda()
 
         dgi_optimizer = torch.optim.Adam(dgi.parameters(),
-                                        lr=args.dgi_lr,
+                                        lr=args.graph_lr,
                                         weight_decay=args.weight_decay)
 
         cnt_wait = 0
         best = 1e9
         best_t = 0
         dur = []
-        train_g.ndata['features'] = features
+        g.ndata['features'] = features
+
+        ########################
+        # graph training part
+        ########################
         for epoch in range(args.n_dgi_epochs):
             # ego-graph extractor (?)
             # NodeFlow generator
-            # train_sampler = dgl.contrib.sampling.NeighborSampler(g, 
-            #                         batch_size=256, expand_factor=5,
-            #                         neighbor_type='in', num_workers=1,
-            #                         add_self_loop=False,
-            #                         num_hops=args.n_layers+1, shuffle=True)
+            train_sampler = dgl.contrib.sampling.NeighborSampler(g, 
+                                    batch_size=256, expand_factor=5,
+                                    neighbor_type='in', num_workers=1,
+                                    add_self_loop=False,
+                                    num_hops=args.n_layers+1, shuffle=True)
+
+            sample_graph = sample_neighbors(g, nodes, fanout=5, edge_dir='in')
+
             dgi.train()
             if epoch >= 3:
                 t0 = time.time()
-            
-            loss = 0.0
 
-            train_sampler =
-            # EGI mode
+            loss = 0.0
             for nf in train_sampler:
                 dgi_optimizer.zero_grad()
                 l = dgi(features, nf)
                 l.backward()
                 loss += l
                 dgi_optimizer.step()
-
+            
             if loss < best:
                 best = loss
                 best_t = epoch
@@ -213,6 +223,7 @@ def main(args):
             #print("Epoch {:05d} | Loss {:.4f}".format(epoch, loss.item()))
 
         # create classifier model
+        # change task --> relation prediction
         classifier = MultiClassifier(args.n_hidden, n_classes)
         if cuda:
             classifier.cuda()
@@ -236,7 +247,7 @@ def main(args):
                 embeds = dgi.encoder(features)
             else:
                 dgi.eval()
-                test_sampler = dgl.contrib.sampling.NeighborSampler(g, g.number_of_nodes(), -1,  # 0,
+                test_sampler = dgl.contrib.sampling.NeighborSampler(g, g.number_of_nodes(), -1, 
                                                                             neighbor_type='in', num_workers=1,
                                                                             add_self_loop=False,
                                                                             num_hops=args.n_layers + 1, shuffle=False)
@@ -256,7 +267,7 @@ def main(args):
             classifier_optimizer.zero_grad()
             preds = classifier(embeds)
             loss = F.nll_loss(preds[train_mask], labels[train_mask])
-            # embed()
+
             loss.backward()
             classifier_optimizer.step()
             
@@ -281,7 +292,7 @@ if __name__ == '__main__':
                         help="dropout probability")
     parser.add_argument("--gpu", type=int, default=-1,
                         help="gpu")
-    parser.add_argument("--dgi-lr", type=float, default=1e-2,
+    parser.add_argument("--graph-lr", type=float, default=1e-2,
                         help="dgi learning rate")
     parser.add_argument("--classifier-lr", type=float, default=1e-2,
                         help="classifier learning rate")
@@ -313,8 +324,6 @@ if __name__ == '__main__':
                         help="graph path")
     parser.add_argument("--label-path", type=str,
                         help="label path")
-    parser.add_argument("--model-id", type=int, default=0,
-                    help="[0, 1, 2, 3]")
 
     parser.set_defaults(self_loop=False)
     args = parser.parse_args()
